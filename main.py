@@ -218,10 +218,41 @@ def find_best_variants(args, table, money_rest, number_of_greedy_obj):
     print("Время, потраченное на выполнение данного кода = ", totalTime * 1000)
     return best_variants_ret
 
-def check_cost(fl):
-    return False
+def find_cost_profit_mvg(args, table, fl):
+    vars = range(1, args.var+1)
+    print()
+    cost = 0
+    profit = 0
 
-def add_children(args, knot, obj_num):  # Добавлять будем только в случае, если затраты еще не превышены
+    for (obj, var) in itertools.product(fl, vars):
+        print(f"obj: {obj}, var: {var}")
+        cost += table[obj][var][0]
+        profit += table[obj][var][1]
+
+    print()
+    return [cost, profit]
+
+def check_cost(args, table, fl):
+    #vars = range(1, args.var + 1)
+    #vars = ['v1', 'v2']
+    print()
+    cost = 0
+    profit = 0
+    variants = [var for var in range(1, args.var + 1)]
+    costs = [variants for _ in range(len(fl))]
+
+    #for subset in itertools.product(fl, repeat=2):
+    for subset in itertools.product(*costs):
+        print(subset)  # Тут все варианты, которые нужно проверить
+        #print(f"obj: {obj}, var: {var}")
+        # cost += table[obj][var][0]
+        # profit += table[obj][var][1]
+
+        # print(subset)
+    print()
+    return [False, cost, profit]
+
+def add_children(args, table, knot, obj_num):  # Добавлять будем только в случае, если затраты еще не превышены
     # Сначал нужно проверить, не превысили ли мы уже для этого варианта наши затраты
     # Если превысили, этот узел нужно удалить, а не добавлять ему детей
     # А лучше организовать проверку перед добавлением, так должно быть быстрее
@@ -233,23 +264,34 @@ def add_children(args, knot, obj_num):  # Добавлять будем толь
         fl.append(knot.name)
         fl.append(obj_num_loc)
         print(fl)  # Вот для этого списка объектов нужно сделать проверку стоимости
-        overcost = check_cost(fl)
-        if overcost:
-            print(knot)
+        overcost = check_cost(args, table, fl)  # Тут нужно возвращать еще и лучший из проверенных вариантов, чтобы в случае успешного проходения проверки сравнить его с лучшим предыдущим и добавить.
+        if overcost[0]:
             continue
 
+        # cost_profit = find_cost_profit_mvg(args, table, fl)
+        # # print(cost_profit)
+        # if cost_profit[0] >= money:
+        #     print("Пропускаем ")
+        #     continue
+        # if cost_profit[0] <= money and cost_profit[1] > bf_profit:
+        #     bf_profit = cost_profit[1]
+        #     bf_cost = cost_profit[0]
+        #     best_variant = subset
+        # return [bf_cost, bf_profit, best_variant]
+
+
+
         kinder = Node(obj_num_loc, parent=knot)
-        add_children(args, kinder, obj_num + 1)
+        add_children(args, table, kinder, obj_num + 1)
         #print('added')
 
-def tree(args):  # Формируем дерево объектов, которые нужно обойти.
+def tree(args, table):  # Формируем дерево объектов, которые нужно обойти.
     root = Node(0)
     for obj_num in range(1, args.obj+1):
         knot = Node(obj_num, parent=root)
-        add_children(args, knot, obj_num + 1)
+        add_children(args, table, knot, obj_num + 1)
     for pre, fill, node in RenderTree(root):
         print("%s%s" % (pre, node.name))
-
 
 
 def mvg(args, table, money):
@@ -261,7 +303,7 @@ def mvg(args, table, money):
     #costs = [variants for _ in range(2)]
     # arr = [0]*args.obj
     # for i in range(args.obj + 1):
-    tree(args)
+    tree(args, table)
     #     # for j in range(args.var + 1):
     #     #     for k in range(args.var + 1):
     #     #         print(i, j, k)
@@ -272,7 +314,7 @@ def mvg(args, table, money):
     pprint.pprint(costs)
     it = itertools.product(*costs)
     for subset in it:
-        l = list(subset)
+        # l = list(subset)
         #print(l)
         #continue
 
