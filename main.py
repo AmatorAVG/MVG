@@ -2,10 +2,7 @@ import time
 import xlrd
 import argparse
 import itertools
-import pprint
-# import numpy as np
 from anytree import Node, RenderTree
-from anytree.exporter import DictExporter
 
 def max_ind(arr):
     maxi = 0
@@ -20,13 +17,13 @@ def main():
     tmp = []
 
     parser = argparse.ArgumentParser(description='Программа расчет максимальной прибыли')
-    parser.add_argument('--path', help='Путь к таблице объектов', default='3.xls')
-    parser.add_argument('--var', help='Число вариантов', default=3)
-    parser.add_argument('--obj', help='Число объектов', default=6)
-    parser.add_argument('--greed', help='Процент объектов для жадного алгоритма, от 0 до 50%', default=40)
-    parser.add_argument('--brute', help='Запускать полный перебор', default=False)
-    parser.add_argument('--mvg', help='Запускать метод ветвей и границ', default=True)
-    parser.add_argument('--usegreed', help='Учитывать решения жадного алгоритма в МВГ', default=True)
+    parser.add_argument('--path', help='Путь к таблице объектов', default='5.xls')
+    parser.add_argument('--var', help='Число вариантов', default=3, type=int)
+    parser.add_argument('--obj', help='Число объектов', default=10, type=int)
+    parser.add_argument('--greed', help='Процент объектов для жадного алгоритма, от 0 до 50%', default=30, type=int)
+    parser.add_argument('--brute', help='Запускать полный перебор', default=True, type=bool)
+    parser.add_argument('--mvg', help='Запускать метод ветвей и границ', default=True, type=bool)
+    parser.add_argument('--usegreed', help='Учитывать решения жадного алгоритма в МВГ', default=True, type=bool)
 
     args = parser.parse_args()
 
@@ -130,15 +127,34 @@ def main():
         greedy_obj = [n[3]+1 for n in greedy_vars]
         if args.usegreed:
             money_rest = money - sum([n[0][0] for n in greedy_vars])
-        else:
-            money_rest = money
-        bf = mvg(args, tmp, money_rest, greedy_obj)
-        print("Затраты: ", bf[0], " - Доход: ", bf[1])
-        print("Выбранные объекты: ", bf[2][0])
-        print("Их варианты: ", bf[2][1])
+            bf = mvg(args, tmp, money_rest, greedy_obj)
+            if greedy_vars:
+                greedy_var = [n[2]+1 for n in greedy_vars]
+                zipped_greed = list(zip(greedy_obj, greedy_var))
+                zipped_mvg = list(zip(bf[2][0], bf[2][1]))
 
-        # print("Их затраты: ", tops)
-        # print("Их выручки: ", exp)
+                if zipped_mvg == [(0, 0)]:
+                    total = zipped_greed
+                else:
+                    total = zipped_greed + zipped_mvg
+
+                total.sort(key=lambda k: k[0])
+                print("Затраты: ", bf[0] + sum([n[0][0] for n in greedy_vars]), " - Доход: ", bf[1] + sum([n[0][1] for n in greedy_vars]))
+                print("Выбранные объекты: ", [n[0] for n in total])
+                print("Их варианты: ", [n[1] for n in total])
+            else:
+                print("Затраты: ", bf[0], " - Доход: ", bf[1])
+                print("Выбранные объекты: ", bf[2][0])
+                print("Их варианты: ", bf[2][1])
+
+
+        else:
+            bf = mvg(args, tmp, money, greedy_obj)
+            print("Затраты: ", bf[0], " - Доход: ", bf[1])
+            print("Выбранные объекты: ", bf[2][0])
+            print("Их варианты: ", bf[2][1])
+
+
         endTime = time.time()
         totalTime = endTime - startTime
         print("Время, потраченное на выполнение данного кода = ", totalTime*1000)
@@ -173,7 +189,7 @@ def find_best_variants(args, table, money_rest, number_of_greedy_obj):
             best_variants.append([*best_variant, ind])
 
         if not best_variants:
-            print('No money, need chiper variant')
+            #print('No money, need chiper variant')
             break  # best_variants_ret  # Деньги закончились быстрее, чем объекты, и не смогли ничего найти на оставшуюся сумму
         best_variants.sort(key=lambda k: k[1], reverse=True)
         #pprint.pprint(best_variants)
@@ -237,7 +253,7 @@ def add_children(args, table, knot, obj_num, money, best_variant, greedy_obj):  
     # А лучше организовать проверку перед добавлением, так должно быть быстрее
 
     for obj_num_loc in range(obj_num, args.obj+1):
-        if args.usegreed and obj_num_loc in greedy_obj:  # Уберем объекты, которые уже взяты жадным алгоритмом
+        if args.usegreed and obj_num_loc in greedy_obj:  # Пропустим объекты, которые уже взяты жадным алгоритмом
             continue
 
         if obj_num_loc <= knot.name:
@@ -257,9 +273,9 @@ def add_children(args, table, knot, obj_num, money, best_variant, greedy_obj):  
 
 def tree(args, table, money, greedy_obj):  # Формируем дерево объектов, которые нужно обойти.
     root = Node(0)
-    best_variant = [0, 0, [0, 0]]
+    best_variant = [0, 0, [[0], (0,)]]
     for obj_num in range(1, args.obj+1):
-        if args.usegreed and obj_num in greedy_obj:  # Уберем объекты, которые уже взяты жадным алгоритмом
+        if args.usegreed and obj_num in greedy_obj:  # Пропустим объекты, которые уже взяты жадным алгоритмом
             continue
 
 
