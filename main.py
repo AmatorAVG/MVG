@@ -15,20 +15,19 @@ def max_ind(arr):
 def main():
 
     tmp = []
-
     parser = argparse.ArgumentParser(description='Программа расчет максимальной прибыли')
     parser.add_argument('--path', help='Путь к таблице объектов', default='5.xls')
     parser.add_argument('--var', help='Число вариантов', default=3, type=int)
     parser.add_argument('--obj', help='Число объектов', default=10, type=int)
-    parser.add_argument('--greed', help='Процент объектов для жадного алгоритма, от 0 до 50%', default=30, type=int)
-    parser.add_argument('--brute', help='Запускать полный перебор', default=True, type=bool)
-    parser.add_argument('--mvg', help='Запускать метод ветвей и границ', default=True, type=bool)
-    parser.add_argument('--usegreed', help='Учитывать решения жадного алгоритма в МВГ', default=True, type=bool)
+    parser.add_argument('--greed', help='Процент объектов для жадного алгоритма, от 0 до 100', default=40, type=int)
+    parser.add_argument('--brute', help='Запускать полный перебор', action="store_true")
+    parser.add_argument('--mvg', help='Запускать метод ветвей и границ', action="store_true")
+    parser.add_argument('--usegreed', help='Учитывать решения жадного алгоритма в МВГ', action="store_true")
 
     args = parser.parse_args()
 
     if not (0 <= args.greed <= 100):
-        print('Процент объектов для жадного алгоритма должен быть от 0 до 50!')
+        print('Процент объектов для жадного алгоритма должен быть от 0 до 100!')
         return
 
     number_of_greedy_obj = int(args.obj * args.greed / 100)
