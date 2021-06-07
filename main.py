@@ -2,36 +2,48 @@ import time
 import xlrd
 import argparse
 import itertools
-from anytree import Node, RenderTree
-
-def max_ind(arr):
-    maxi = 0
-    for i in range(len(arr)):
-        if arr[maxi] < arr[i]:
-            maxi = i
-    return maxi
+from anytree import Node
+# , RenderTree
 
 
-def main():
+def r_print(*args, **kwargs):
+    if not hasattr(r_print, '_state'):  # инициализация значения
+        r_print._state = ""
+    together = ''.join(map(str, args))  # avoid the arg is not str
+    if args:
+        r_print._state += together + '\n'
+    else:
+        r_print._state += '\n'
+    if not r_print._gui:
+        print(*args, **kwargs)
 
-    tmp = []
-    parser = argparse.ArgumentParser(description='Программа расчет максимальной прибыли')
-    parser.add_argument('--path', help='Путь к таблице объектов', default='5.xls')
-    parser.add_argument('--var', help='Число вариантов', default=3, type=int)
-    parser.add_argument('--obj', help='Число объектов', default=10, type=int)
-    parser.add_argument('--greed', help='Процент объектов для жадного алгоритма, от 0 до 100', default=40, type=int)
-    parser.add_argument('--brute', help='Запускать полный перебор', action="store_true")
-    parser.add_argument('--mvg', help='Запускать метод ветвей и границ', action="store_true")
-    parser.add_argument('--usegreed', help='Учитывать решения жадного алгоритма в МВГ', action="store_true")
 
-    args = parser.parse_args()
+def main(arg):
+
+    if arg:
+        args = argparse.Namespace(**arg)
+        args.var = int(args.var)
+        args.obj = int(args.obj)
+        args.greed = int(args.greed)
+    else:
+        parser = argparse.ArgumentParser(description='Программа расчет максимальной прибыли')
+        parser.add_argument('--path', help='Путь к таблице объектов', default='5.xls')
+        parser.add_argument('--var', help='Число вариантов', default=3, type=int)
+        parser.add_argument('--obj', help='Число объектов', default=10, type=int)
+        parser.add_argument('--greed', help='Процент объектов для жадного алгоритма, от 0 до 100', default=40, type=int)
+        parser.add_argument('--brute', help='Запускать полный перебор', action="store_true")
+        parser.add_argument('--mvg', help='Запускать метод ветвей и границ', action="store_true")
+        parser.add_argument('--usegreed', help='Учитывать решения жадного алгоритма в МВГ', action="store_true")
+
+        args = parser.parse_args()
 
     if not (0 <= args.greed <= 100):
-        print('Процент объектов для жадного алгоритма должен быть от 0 до 100!')
+        r_print('Процент объектов для жадного алгоритма должен быть от 0 до 100!')
         return
 
+    tmp = []
     number_of_greedy_obj = int(args.obj * args.greed / 100)
-    print(f'Число объектов для жадного алгоритма: {number_of_greedy_obj} из {args.obj}')
+    r_print(f'Число объектов для жадного алгоритма: {number_of_greedy_obj} из {args.obj}')
 
     book = xlrd.open_workbook(args.path)
     sheet = book.sheet_by_index(0)
@@ -43,26 +55,23 @@ def main():
         data = list(map(list, zip(data1[i], data2[i])))
         tmp.append(data)
 
-    print()
-    print("**** Жадный алгоритм ********")
-    greedy_vars = find_best_variants(args, tmp, money, number_of_greedy_obj)
-
+    greedy_vars = find_best_variants(tmp, money, number_of_greedy_obj)
 
     if args.brute:
-        print()
-        print("**** Метод полного перебора ********")
-        startTime = time.time()
+        r_print()
+        r_print("**** Метод полного перебора ********")
+        startTime = time.monotonic()
         bf = brute_force(args, tmp, money)
-        print("Затраты: ", bf[0], " - Доход: ", bf[1])
-        print("Выбранные варианты: ", [x+1 if x < args.var else 0 for x in bf[2]])
-        endTime = time.time()
+        r_print("Затраты: ", bf[0], " - Доход: ", bf[1])
+        r_print("Выбранные варианты: ", [x+1 if x < args.var else 0 for x in bf[2]])
+        endTime = time.monotonic()
         totalTime = endTime - startTime
-        print("Время, потраченное на выполнение данного кода = ", totalTime*1000)
+        r_print("Время, потраченное на выполнение данного кода = ", totalTime*1000)
 
     if args.mvg:
-        print()
-        print("**** Метод ветвей и границ ********")
-        startTime = time.time()
+        r_print()
+        r_print("**** Метод ветвей и границ ********")
+        startTime = time.monotonic()
         greedy_obj = [n[3]+1 for n in greedy_vars]
         if args.usegreed:
             money_rest = money - sum([n[0][0] for n in greedy_vars])
@@ -78,28 +87,37 @@ def main():
                     total = zipped_greed + zipped_mvg
 
                 total.sort(key=lambda k: k[0])
-                print("Затраты: ", bf[0] + sum([n[0][0] for n in greedy_vars]), " - Доход: ", bf[1] + sum([n[0][1] for n in greedy_vars]))
-                print("Выбранные объекты: ", [n[0] for n in total])
-                print("Их варианты: ", [n[1] for n in total])
+                r_print("Затраты: ", bf[0] + sum([n[0][0] for n in greedy_vars]),
+                        " - Доход: ", bf[1] + sum([n[0][1] for n in greedy_vars]))
+                r_print("Выбранные объекты: ", [n[0] for n in total])
+                r_print("Их варианты: ", [n[1] for n in total])
             else:
-                print("Затраты: ", bf[0], " - Доход: ", bf[1])
-                print("Выбранные объекты: ", bf[2][0])
-                print("Их варианты: ", bf[2][1])
+                r_print("Затраты: ", bf[0], " - Доход: ", bf[1])
+                r_print("Выбранные объекты: ", bf[2][0])
+                r_print("Их варианты: ", bf[2][1])
 
         else:
             bf = mvg(args, tmp, money, greedy_obj)
-            print("Затраты: ", bf[0], " - Доход: ", bf[1])
-            print("Выбранные объекты: ", bf[2][0])
-            print("Их варианты: ", bf[2][1])
+            r_print("Затраты: ", bf[0], " - Доход: ", bf[1])
+            r_print("Выбранные объекты: ", bf[2][0])
+            r_print("Их варианты: ", bf[2][1])
 
-        endTime = time.time()
+        endTime = time.monotonic()
         totalTime = endTime - startTime
-        print("Время, потраченное на выполнение данного кода = ", totalTime*1000)
+        r_print("Время, потраченное на выполнение данного кода = ", totalTime*1000)
 
-def find_best_variants(args, table, money_rest, number_of_greedy_obj):
-    startTime = time.time()
+    res = r_print._state
+    r_print._state = ''
+    return res
+
+
+def find_best_variants(table, money_rest, number_of_greedy_obj):
+
+    startTime = time.monotonic()
     if number_of_greedy_obj == 0:
         return []
+    r_print()
+    r_print("**** Жадный алгоритм ********")
     best_variants_ret = []
     used_obj = []  # Список объектов, которые уже попали в выборку, чтобы не искать среди них снова
     expenses = 0
@@ -108,7 +126,7 @@ def find_best_variants(args, table, money_rest, number_of_greedy_obj):
     choose_obj = []
     while len(used_obj) < number_of_greedy_obj:
 
-        best_variants = []  # np.zeros((args.obj, 5))
+        best_variants = []
         for vs in table:  # Обойдем каждый объект в поиске лучшего варианта на оставшиеся деньги
             ind = table.index(vs)
             if ind in used_obj:
@@ -121,31 +139,30 @@ def find_best_variants(args, table, money_rest, number_of_greedy_obj):
             best_variants.append([*best_variant, ind])
 
         if not best_variants:
-            break  # best_variants_ret  # Деньги закончились быстрее, чем объекты, и не смогли ничего найти на оставшуюся сумму
+            break  # Деньги закончились быстрее, чем объекты, и не смогли ничего найти на оставшуюся сумму
         best_variants.sort(key=lambda k: k[1], reverse=True)
         for el in best_variants:
             if el[0][0] <= money_rest:
                 best_variants_ret.append(el)
                 money_rest -= el[0][0]
                 used_obj.append(el[3])
-
                 expenses += el[0][0]
                 proceeds += el[0][1]
                 maxind.append(el[2] + 1)
                 choose_obj.append(el[3] + 1)
-
                 break
 
-    print("Затраты: ", expenses, " - Доход: ", proceeds)
-    print("Выбранные объекты: ", choose_obj)
-    print("Выбранные варианты: ", maxind)
+    r_print("Затраты: ", expenses, " - Доход: ", proceeds)
+    r_print("Выбранные объекты: ", choose_obj)
+    r_print("Выбранные варианты: ", maxind)
 
-    endTime = time.time()
+    endTime = time.monotonic()
     totalTime = endTime - startTime
-    print("Время, потраченное на выполнение данного кода = ", totalTime * 1000)
+    r_print("Время, потраченное на выполнение данного кода = ", totalTime * 1000)
     return best_variants_ret
 
-def find_cost_profit_mvg(args, table, subset, fl):
+
+def find_cost_profit_mvg(table, subset, fl):
     cost = 0
     profit = 0
     for i in fl:
@@ -153,13 +170,14 @@ def find_cost_profit_mvg(args, table, subset, fl):
         profit += table[i-1][subset[fl.index(i)]][1]
     return [cost, profit]
 
+
 def check_cost(args, table, fl, money, best_variant):
     variants = [var for var in range(1, args.var + 1)]
     costs = [variants for _ in range(len(fl))]
     ok = False
 
     for subset in itertools.product(*costs):
-        cost_profit = find_cost_profit_mvg(args, table, subset, fl)
+        cost_profit = find_cost_profit_mvg(table, subset, fl)
 
         if cost_profit[0] <= money:
             ok = True
@@ -169,7 +187,9 @@ def check_cost(args, table, fl, money, best_variant):
                 best_variant[2] = [fl, subset]
     return ok
 
-def add_children(args, table, knot, obj_num, money, best_variant, greedy_obj):  # Добавлять будем только в случае, если затраты еще не превышены
+
+def add_children(args, table, knot, obj_num, money, best_variant, greedy_obj):
+    # Добавлять будем только в случае, если затраты еще не превышены
     # Сначал нужно проверить, не превысили ли мы уже для этого варианта наши затраты
     # Если превысили, этот узел нужно удалить, а не добавлять ему детей
     # А лучше организовать проверку перед добавлением, так должно быть быстрее
@@ -185,11 +205,12 @@ def add_children(args, table, knot, obj_num, money, best_variant, greedy_obj):  
         fl.append(obj_num_loc)
         no_overcost = check_cost(args, table, fl, money, best_variant)  # Тут нужно возвращать еще и лучший из проверенных вариантов, чтобы в случае успешного проходения проверки сравнить его с лучшим предыдущим и добавить.
         if not no_overcost:
-            print("Данную ветвь отсекаем, т.к. превышаются затраты при любом варианте:", fl)
+            # r_print("Данную ветвь отсекаем, т.к. превышаются затраты при любом варианте:", fl)
             continue
 
         kinder = Node(obj_num_loc, parent=knot)
         add_children(args, table, kinder, obj_num + 1, money, best_variant, greedy_obj)
+
 
 def tree(args, table, money, greedy_obj):  # Формируем дерево объектов, которые нужно обойти.
     root = Node(0)
@@ -201,14 +222,15 @@ def tree(args, table, money, greedy_obj):  # Формируем дерево о�
         fl = [obj_num]
         no_overcost = check_cost(args, table, fl, money, best_variant)  # Тут нужно возвращать еще и лучший из проверенных вариантов, чтобы в случае успешного проходения проверки сравнить его с лучшим предыдущим и добавить.
         if not no_overcost:
-            print("Данную ветвь отсекаем, т.к. превышаются затраты при любом варианте:", fl)
+            # r_print("Данную ветвь отсекаем, т.к. превышаются затраты при любом варианте:", fl)
             continue
 
         knot = Node(obj_num, parent=root)
         add_children(args, table, knot, obj_num + 1, money, best_variant, greedy_obj)
-    for pre, fill, node in RenderTree(root):
-        print("%s%s" % (pre, node.name))
+    # for pre, fill, node in RenderTree(root):
+    #     r_print("%s%s" % (pre, node.name))
     return best_variant
+
 
 def mvg(args, table, money, greedy_obj):
     for i in table:
@@ -230,7 +252,7 @@ def brute_force(args, table, money):
     bf_cost = 0
     best_variant = ...
     for subset in itertools.product(*costs):
-        cost_profit = find_cost_profit(args, table, subset)
+        cost_profit = find_cost_profit(table, subset)
         if cost_profit[0] <= money and cost_profit[1] > bf_profit:
             bf_profit = cost_profit[1]
             bf_cost = cost_profit[0]
@@ -238,7 +260,7 @@ def brute_force(args, table, money):
     return [bf_cost, bf_profit, best_variant]
 
 
-def find_cost_profit(args, table, subset):
+def find_cost_profit(table, subset):
     cost = 0
     profit = 0
     for i in range(len(subset)):
@@ -248,4 +270,5 @@ def find_cost_profit(args, table, subset):
 
 
 if __name__ == '__main__':
-    main()
+    r_print._gui = False
+    main(False)
